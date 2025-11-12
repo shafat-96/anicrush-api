@@ -284,13 +284,13 @@ app.get('/api/anime/:anilistId/:episodeNum', async (req, res) => {
         
         // Find the specific episode data
         const episodeNumber = parseInt(episodeNum) || 1;
-        const episodeData = mappedData.episodes.find(ep => ep.number === episodeNumber) || {};
+        const episodeData = (mappedData.episodes || []).find(ep => ep.number === episodeNumber) || {};
         
         // Add metadata from the mapped data
         const response = {
             ...hlsData,
             metadata: {
-                title: mappedData.titles?.english || mappedData.titles?.romaji,
+                title: mappedData.title?.english || mappedData.title?.romaji,
                 anilistId: parseInt(anilistId),
                 movieId: movieId,
                 episode: episodeNumber,
