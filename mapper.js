@@ -1,4 +1,5 @@
 const axios = require('axios');
+const stringSimilarity = require('string-similarity');
 
 // Common headers for API requests
 const getCommonHeaders = () => ({
@@ -27,47 +28,6 @@ query ($id: Int) {
     seasonYear
   }
 }`;
-
-// Function to calculate string similarity using Levenshtein distance
-function calculateLevenshteinSimilarity(str1, str2) {
-    if (!str1 || !str2) return 0;
-    str1 = str1.toLowerCase();
-    str2 = str2.toLowerCase();
-
-    const matrix = Array(str2.length + 1).fill(null)
-        .map(() => Array(str1.length + 1).fill(null));
-
-    for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
-    for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
-
-    for (let j = 1; j <= str2.length; j++) {
-        for (let i = 1; i <= str1.length; i++) {
-            const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
-            matrix[j][i] = Math.min(
-                matrix[j][i - 1] + 1,
-                matrix[j - 1][i] + 1,
-                matrix[j - 1][i - 1] + indicator
-            );
-        }
-    }
-
-    const maxLength = Math.max(str1.length, str2.length);
-    if (maxLength === 0) return 100;
-    return ((maxLength - matrix[str2.length][str1.length]) / maxLength) * 100;
-}
-
-// Function to calculate word-based similarity
-function calculateWordSimilarity(str1, str2) {
-    if (!str1 || !str2) return 0;
-    
-    const words1 = str1.toLowerCase().split(/\s+/).filter(Boolean);
-    const words2 = str2.toLowerCase().split(/\s+/).filter(Boolean);
-    
-    const commonWords = words1.filter(word => words2.includes(word));
-    const totalUniqueWords = new Set([...words1, ...words2]).size;
-    
-    return (commonWords.length / totalUniqueWords) * 100;
-}
 
 // Function to normalize title for comparison
 function normalizeTitle(title) {
@@ -177,13 +137,13 @@ async function getEpisodeList(movieId) {
     }
 }
 
-// Function to calculate overall similarity between titles
+// Function to calculate similarity between titles using string-similarity library
 function calculateTitleSimilarity(title1, title2) {
-    const levenshteinSim = calculateLevenshteinSimilarity(title1, title2);
-    const wordSim = calculateWordSimilarity(title1, title2);
-    
-    // Weight the similarities (favoring word-based matching for titles)
-    return (levenshteinSim * 0.4) + (wordSim * 0.6);
+    if (!title1 || !title2) return 0;
+    return stringSimilarity.compareTwoStrings(
+        title1.toLowerCase(), 
+        title2.toLowerCase()
+    ) * 100; // Convert to percentage
 }
 
 // Function to find best match between AniList and anicrush results
@@ -217,11 +177,13 @@ function findBestMatch(anilistData, anicrushResults) {
             typePenalty = 15; // small penalty instead of skip
         }
 
-        const resultTitles = [result.name, result.name_english].filter(Boolean).map(normalizeTitle);
+        const resultTitles = [result.name, result.name_english].filter(Boolean);
 
         for (const aTitle of anilistTitles) {
             for (const rTitle of resultTitles) {
-                const score = calculateTitleSimilarity(aTitle, rTitle);
+                const similarity = calculateTitleSimilarity(aTitle, rTitle);
+                const score = Math.max(0, similarity - typePenalty);
+                
                 if (score > highestScore) {
                     highestScore = score;
                     bestMatch = result;
@@ -230,7 +192,7 @@ function findBestMatch(anilistData, anicrushResults) {
         }
     }
 
-    return highestScore >= 25 ? bestMatch : null; // accept if 25%+ similarity
+    return highestScore >= 60 ? bestMatch : null; // Increased threshold to 60% for better accuracy
 }
 
 // Alias for compatibility
