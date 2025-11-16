@@ -146,6 +146,25 @@ function calculateTitleSimilarity(title1, title2) {
     ) * 100; // Convert to percentage
 }
 
+function extractSeasonNumber(title) {
+    if (!title) return null;
+    const lower = title.toLowerCase();
+
+    let match = lower.match(/(?:season|cour|part)\s*(\d{1,2})/i);
+    if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        if (!Number.isNaN(num)) return num;
+    }
+
+    match = lower.match(/(\d{1,2})\s*$/);
+    if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        if (!Number.isNaN(num) && num < 10) return num;
+    }
+
+    return null;
+}
+
 // Function to find best match between AniList and anicrush results
 function findBestMatch(anilistData, anicrushResults) {
     if (!anicrushResults?.result?.movies?.length) return null;
@@ -156,6 +175,11 @@ function findBestMatch(anilistData, anicrushResults) {
         anilistData.title.native,
         ...(anilistData.synonyms || [])
     ].filter(Boolean).map(normalizeTitle);
+
+    const primaryAniListTitle = normalizeTitle(
+        anilistData.title.romaji || anilistData.title.english || anilistData.title.native
+    );
+    const anilistSeason = extractSeasonNumber(primaryAniListTitle);
 
     let bestMatch = null;
     let highestScore = 0;
@@ -182,7 +206,18 @@ function findBestMatch(anilistData, anicrushResults) {
         for (const aTitle of anilistTitles) {
             for (const rTitle of resultTitles) {
                 const similarity = calculateTitleSimilarity(aTitle, rTitle);
-                const score = Math.max(0, similarity - typePenalty);
+                let score = Math.max(0, similarity - typePenalty);
+
+                if (anilistSeason !== null) {
+                    const resultSeason = extractSeasonNumber(rTitle);
+                    if (resultSeason !== null) {
+                        if (resultSeason === anilistSeason) {
+                            score += 25;
+                        } else {
+                            score -= 30;
+                        }
+                    }
+                }
                 
                 if (score > highestScore) {
                     highestScore = score;
