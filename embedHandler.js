@@ -1,6 +1,6 @@
 const axios = require("axios");
 
-const MEGACLOUD_URL = "https://megacloud.blog";
+const MEGACLOUD_URL = "https://megacloud.tv";
 const KEY_URL =
   "https://raw.githubusercontent.com/yogesh-hacker/MegacloudKeys/refs/heads/main/keys.json";
 const DECODE_URL =

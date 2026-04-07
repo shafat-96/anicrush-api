@@ -225,7 +225,10 @@ app.get('/api/anime/hls/:movieId', async (req, res) => {
             return res.status(404).json({ error: 'Embed link not found' });
         }
 
-        const embedUrl = embedResponse.data.result.link;
+        let embedUrl = embedResponse.data.result.link;
+        
+        // Convert .blog to .tv domain
+        embedUrl = embedUrl.replace(/\.blog/g, '.tv');
         
         // Get HLS link from embed URL
         const hlsData = await getHlsLink(embedUrl);
@@ -277,7 +280,10 @@ app.get('/api/anime/:anilistId/:episodeNum', async (req, res) => {
             return res.status(404).json({ error: 'Embed link not found' });
         }
 
-        const embedUrl = embedResponse.data.result.link;
+        let embedUrl = embedResponse.data.result.link;
+        
+        // Convert .blog to .tv domain
+        embedUrl = embedUrl.replace(/\.blog/g, '.tv');
         
         // Get HLS link from embed URL
         const hlsData = await getHlsLink(embedUrl);
